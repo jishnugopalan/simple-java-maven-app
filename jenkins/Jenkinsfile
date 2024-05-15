@@ -1,9 +1,22 @@
 pipeline {
     agent any
     stages {
+        stage('Checkout') { 
+            steps {
+                git 'https://github.com/jishnugopalan/simple-java-maven-app.git'
+            }
+        }
         stage('Build') { 
             steps {
-                sh 'mvn -B -DskipTests clean package' 
+                sh 'mvn clean install' 
+            }
+        }
+        stage('SonarQube Analysis') { 
+            steps {
+                withSonarQubeEnv('SonarQube'){
+                	sh 'mvn sonar:sonar'
+                }
+                 
             }
         }
     }
