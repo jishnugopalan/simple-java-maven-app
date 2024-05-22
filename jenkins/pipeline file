@@ -44,25 +44,25 @@ pipeline {
                 }
             }
         }
-        stage('upload to arifactory'){
-            steps{
-                script{
-                    def server=Artifactory.server("${env.ARTIFACTORY_SERVER_ID}")
-                    def uploadSpec="""{
-                        "files":[{
-                            "pattern":"${WAR_FILE}",
-                            "target":"${env.ARTIFACTORY_REPO}/"
-                        }]
-                    }"""
-                    server.cli.setServer(server:env.ARTIFACTORY_SERVER_ID)
-                    writeFile file:'uploadSpec.json', text:uploadSpec bat 'jfrog rt upload --spec=uploadSpec.json'
-                }
-            }
-        }
+        // stage('upload to arifactory'){
+        //     steps{
+        //         script{
+        //             def server=Artifactory.server("${env.ARTIFACTORY_SERVER_ID}")
+        //             def uploadSpec="""{
+        //                 "files":[{
+        //                     "pattern":"${WAR_FILE}",
+        //                     "target":"${env.ARTIFACTORY_REPO}/"
+        //                 }]
+        //             }"""
+        //             server.cli.setServer(server:env.ARTIFACTORY_SERVER_ID)
+        //             writeFile file:'uploadSpec.json', text:uploadSpec bat 'jfrog rt upload --spec=uploadSpec.json'
+        //         }
+        //     }
+        // }
         stage('deploy'){
             steps{
                 script{
-                    def warFile = 'target\\my-app-1.0-SNAPSHOT.jar'
+                    def warFile = 'target\\my-app-1.0-SNAPSHOT.war'
                     def deployUrl = "http://${env.TOMCAT_HOST}:${env.TOMCAT_PORT}/manager/text/deploy?path=/my-app-1.0-SNAPSHOT"
                     bat """curl --upload-file ${warFile} ^ --user ${env.TOMCAT_USER}:${env.TOMCAT_PASSWORD} ^ ${deployUrl}"""
                 }
