@@ -1,67 +1,81 @@
 pipeline {
     agent any
-
-    environment {
-        ARTIFACTORY_SERVER_ID = 'artifactory-server'  // ID for the Artifactory server in Jenkins
-        ARTIFACTORY_REPO = 'libs-release-local'  // Target repository in Artifactory
-        WAR_FILE = 'target/your-application.war'  // Path to the generated WAR file
+    
+    tools{
+        maven "Maven_Home"
+        jfrog "jfrog_cli"
     }
-
-    tools {
-        jfrog 'jfrog-cli'  // Name of the JFrog CLI tool as configured in Global Tool Configuration
+    
+    environment{
+        TOMCAT_USER= 'admin'
+        TOMCAT_PASSWORD= 'admin'
+        TOMCAT_PORT= '8090'
+        TOMCAT_HOST = 'localhost'
+        ARTIFACTORY_SERVER_ID='admin'
+        ARTIFACTORY_REPO='example-repo-local'
+        WAR_FILE='target/my-app-1.0-SNAPSHOT.war'
     }
 
     stages {
-        stage('Checkout') {
+        stage('checkout') {
             steps {
-                git 'https://your-repository-url.git'
+                git 'https://github.com/jishnugopalan/simple-java-maven-app.git'
             }
         }
-
-        stage('Build') {
-            steps {
-                bat 'mvn clean package'
+        stage('compile'){
+            steps{
+                bat "mvn compile"
             }
         }
-
-        stage('Test') {
-            steps {
-                bat 'mvn test'
+        stage('test'){
+            steps{
+                bat "mvn test"
             }
         }
-
-        stage('Upload to Artifactory') {
-            steps {
-                script {
-                    // Configure Artifactory server using the Artifactory plugin for Jenkins
-                    def server = Artifactory.server(env.ARTIFACTORY_SERVER_ID)
-
-                    // Define the upload spec for JFrog CLI
-                    def uploadSpec = """{
-                        "files": [{
-                            "pattern": "${WAR_FILE}",
-                            "target": "${env.ARTIFACTORY_REPO}/"
-                        }]
-                    }"""
-
-                    // Write the upload spec to a file
-                    writeFile file: 'uploadSpec.json', text: uploadSpec
-
-                    // Use JFrog CLI to upload the WAR file to Artifactory
-                    bat """
-                    jfrog rt u --url="${server.url()}" ^
-                              --user="${server.username()}" ^
-                              --password="${server.password()}" ^
-                              --spec=uploadSpec.json
-                    """
+        stage('build'){
+            steps{
+                bat "mvn package"
+            }
+        }
+        stage('sonarqube analysis'){
+            steps{
+                withSonarQubeEnv('sonarserver'){
+                    bat "mvn clean package sonar:sonar"
                 }
             }
         }
-    }
 
-    post {
-        always {
-            cleanWs()
+ stage('upload to artifactory') {
+    steps {
+        script {
+           
+            def uploadSpec = """{
+                "files": [{
+                    "pattern": "${env.WAR_FILE}",
+                    "target": "${env.ARTIFACTORY_REPO}/"
+                }]
+            }"""
+
+            writeFile file: 'uploadSpec.json', text: uploadSpec
+
+            bat """
+            jf rt u --url="http://localhost:8081/artifactory/" ^
+                      --user="admin" ^
+                      --password="password" ^
+                      --spec=uploadSpec.json
+            """
         }
     }
+}
+        stage('deploy'){
+            steps{
+                script{
+                    def warFile = 'target\\my-app-1.0-SNAPSHOT.war'
+                    def deployUrl = "http://${env.TOMCAT_HOST}:${env.TOMCAT_PORT}/manager/text/deploy?path=/my-app-1.0-SNAPSHOT"
+                    bat """ curl -u admin:password -O http://localhost:8081/artifactory/example-repo-local/my-app-1.0-SNAPSHOT.war scp my-app-1.0-SNAPSHOT.war ${env.TOMCAT_USER}@${env.TOMCAT_HOST}:${env.TOMCAT_PORT}/manager/text/deploy?path= """
+                //    bat """curl --upload-file ${warFile} ^ --user ${env.TOMCAT_USER}:${env.TOMCAT_PASSWORD} ^ ${deployUrl}"""
+                }
+            }
+        }
+   }
 }
