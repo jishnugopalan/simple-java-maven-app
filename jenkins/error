@@ -100,3 +100,30 @@ pipeline {
     }
    
 }
+
+stage('upload to artifactory') {
+    steps {
+        script {
+            def server = Artifactory.server(env.ARTIFACTORY_SERVER_ID)
+
+            // Define the upload spec for JFrog CLI
+            def uploadSpec = """{
+                "files": [{
+                    "pattern": "${env.WAR_FILE}",
+                    "target": "${env.ARTIFACTORY_REPO}/"
+                }]
+            }"""
+
+            // Write the upload spec to a file
+            writeFile file: 'uploadSpec.json', text: uploadSpec
+
+            // Use JFrog CLI to upload the WAR file to Artifactory
+            bat """
+            jfrog rt u --url="${server.getUrl()}" ^
+                      --user="${server.getUsername()}" ^
+                      --password="${server.getPassword()}" ^
+                      --spec=uploadSpec.json
+            """
+        }
+    }
+}
