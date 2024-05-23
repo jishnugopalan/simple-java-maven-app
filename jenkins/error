@@ -1,0 +1,4 @@
+Also:   org.jenkinsci.plugins.workflow.actions.ErrorAction$ErrorId: 0fe8404d-9994-4a7d-8909-4a38e55936e4
+groovy.lang.MissingPropertyException: No such property: Artifactory for class: groovy.lang.Binding
+	at groovy.lang.Binding.getVariable(Binding.java:63)
+	at org.jenkinsci.plugins.scriptsecurity.sandbox.groovy.SandboxInterceptor.onGetProperty(SandboxInterceptor.java:285)
