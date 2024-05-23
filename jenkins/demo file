@@ -1,0 +1,67 @@
+pipeline {
+    agent any
+
+    environment {
+        ARTIFACTORY_SERVER_ID = 'artifactory-server'  // ID for the Artifactory server in Jenkins
+        ARTIFACTORY_REPO = 'libs-release-local'  // Target repository in Artifactory
+        WAR_FILE = 'target/your-application.war'  // Path to the generated WAR file
+    }
+
+    tools {
+        jfrog 'jfrog-cli'  // Name of the JFrog CLI tool as configured in Global Tool Configuration
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://your-repository-url.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                bat 'mvn clean package'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                bat 'mvn test'
+            }
+        }
+
+        stage('Upload to Artifactory') {
+            steps {
+                script {
+                    // Configure Artifactory server using the Artifactory plugin for Jenkins
+                    def server = Artifactory.server(env.ARTIFACTORY_SERVER_ID)
+
+                    // Define the upload spec for JFrog CLI
+                    def uploadSpec = """{
+                        "files": [{
+                            "pattern": "${WAR_FILE}",
+                            "target": "${env.ARTIFACTORY_REPO}/"
+                        }]
+                    }"""
+
+                    // Write the upload spec to a file
+                    writeFile file: 'uploadSpec.json', text: uploadSpec
+
+                    // Use JFrog CLI to upload the WAR file to Artifactory
+                    bat """
+                    jfrog rt u --url="${server.url()}" ^
+                              --user="${server.username()}" ^
+                              --password="${server.password()}" ^
+                              --spec=uploadSpec.json
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
