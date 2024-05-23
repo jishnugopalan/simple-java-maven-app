@@ -3,7 +3,7 @@ pipeline {
     
     tools{
         maven "Maven_Home"
-        jfrog "jfrog_instance"
+        jfrog "jfrog_cli"
     }
     
     environment{
@@ -11,9 +11,9 @@ pipeline {
         TOMCAT_PASSWORD= 'admin'
         TOMCAT_PORT= '8090'
         TOMCAT_HOST = 'localhost'
-        ARTIFACTORY_SERVER_ID='jfrog_cli_remote'
-        ARTIFACTORY_REPO='jfrog-cli-remote'
-        WAR_FILE='target/my-app-1.0-SNAPSHOT.jar'
+        ARTIFACTORY_SERVER_ID='admin'
+        ARTIFACTORY_REPO='example-repo-local'
+        WAR_FILE='target/my-app-1.0-SNAPSHOT.war'
     }
 
     stages {
@@ -44,21 +44,38 @@ pipeline {
                 }
             }
         }
-        // stage('upload to arifactory'){
-        //     steps{
-        //         script{
-        //             def server=Artifactory.server("${env.ARTIFACTORY_SERVER_ID}")
-        //             def uploadSpec="""{
-        //                 "files":[{
-        //                     "pattern":"${WAR_FILE}",
-        //                     "target":"${env.ARTIFACTORY_REPO}/"
-        //                 }]
-        //             }"""
-        //             server.cli.setServer(server:env.ARTIFACTORY_SERVER_ID)
-        //             writeFile file:'uploadSpec.json', text:uploadSpec bat 'jfrog rt upload --spec=uploadSpec.json'
-        //         }
-        //     }
-        // }
+stage('jf cli test'){
+    steps{
+        bat "jf -v"
+        
+    }
+}
+ stage('upload to artifactory') {
+    steps {
+        script {
+           // def server = Artifactory.server("${env.ARTIFACTORY_SERVER_ID}")
+
+            // Define the upload spec for JFrog CLI
+            def uploadSpec = """{
+                "files": [{
+                    "pattern": "${env.WAR_FILE}",
+                    "target": "${env.ARTIFACTORY_REPO}/"
+                }]
+            }"""
+
+            // Write the upload spec to a file
+            writeFile file: 'uploadSpec.json', text: uploadSpec
+
+            // Use JFrog CLI to upload the WAR file to Artifactory
+            bat """
+            jf rt u --url="http://localhost:8081/artifactory/" ^
+                      --user="admin" ^
+                      --password="password" ^
+                      --spec=uploadSpec.json
+            """
+        }
+    }
+}
         stage('deploy'){
             steps{
                 script{
