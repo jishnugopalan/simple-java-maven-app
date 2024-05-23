@@ -44,12 +44,7 @@ pipeline {
                 }
             }
         }
-stage('jf cli test'){
-    steps{
-        bat "jf -v"
-        
-    }
-}
+
  stage('upload to artifactory') {
     steps {
         script {
